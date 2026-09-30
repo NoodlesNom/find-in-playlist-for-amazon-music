@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Find in Playlist for Amazon Music: Microsoft Edge extension</title>
+<meta name="description" content="A free Microsoft Edge extension that finds the next song in an Amazon Music playlist by title or artist, including tracks that are not loaded yet. Search stays on the page. Not affiliated with Amazon.">
+<link rel="icon" href="img/icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#"><img src="img/icon.png" alt="">Find in Playlist</a>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="#privacy" class="hide-s">Privacy</a>
+      <a href="#more">More add-ons</a>
+      <a href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <a class="pill" href="#features"><b>1.0.8</b> Playlist pages only &rarr;</a>
+    <h1>Find the next song <span>in the playlist</span></h1>
+    <p class="lead">Find in Playlist for Amazon Music is a free Microsoft Edge extension. On an Amazon Music playlist page, a floating button sits under the lyrics translator button. Type part of a title or an artist and choose Find next. The match is a case-insensitive substring, and songs that are not loaded yet are included. It scrolls the row into view. It does not play it.</p>
+    <div class="buttons">
+      <a class="btn primary" href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music" title="Source and load-unpacked install">Get it on GitHub</a>
+      <a class="btn" href="https://noodlesnom.github.io/lyrics-translate-for-amazon-music/">Lyrics Translate</a>
+    </div>
+    <p class="note">Not in the Microsoft Edge Add-ons store yet. Free and open source (MIT). No account, no analytics. Not affiliated with Amazon.</p>
+    <div class="shot" style="background:#13181b;padding:28px 24px 32px">
+      <div style="display:flex;justify-content:flex-end;gap:16px;align-items:flex-start">
+        <div style="text-align:right;color:#a3b0b6;font-size:13px;padding-top:6px;max-width:280px">The translator button is on top. Find in Playlist sits under it. The search box opens below the find button. The translation panel stacks above the search button.</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+          <div style="width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:rgba(20,22,23,.92);color:#25d1da;display:flex;align-items:center;justify-content:center;font-weight:700" title="Lyrics translator">文</div>
+          <div style="width:32px;height:32px;border-radius:50%;border:1px solid #25d1da;background:rgba(20,22,23,.92);color:#25d1da;display:flex;align-items:center;justify-content:center" title="Find in playlist 1.0.8">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 15.5 L20 20.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;background:#0f1111;border:1px solid #3a3f41;border-radius:10px;padding:8px;width:280px">
+            <span style="flex:1;height:28px;border:1px solid #25d1da;border-radius:6px;background:#1c1f20;color:rgba(255,255,255,.45);font-size:13px;line-height:28px;padding:0 8px">Song or artist</span>
+            <span style="height:28px;border-radius:6px;background:#25d1da;color:#0f1111;font:600 13px/28px system-ui,sans-serif;padding:0 10px">Find next</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Illustration of the buttons and the search box. No playlist and no lyrics.</p>
+  </div>
+</div>
+
+<section id="features">
+  <div class="wrap">
+    <h2>What it does</h2>
+    <p class="sub">Only on Amazon Music playlist pages. Nothing here plays the song.</p>
+    <div class="grid">
+      <div class="card"><div class="icon">⌕</div><h3>Find next</h3>
+        <p>Type part of a title or an artist, then Find next. The match is a case-insensitive substring of the title or the artist.</p></div>
+      <div class="card"><div class="icon">↓</div><h3>Songs not loaded yet</h3>
+        <p>The playlist does not have to be fully loaded. Find next scrolls so later tracks can be searched, then stops on the next match.</p></div>
+      <div class="card"><div class="icon">↩</div><h3>Wraps once</h3>
+        <p>After the last match, the next search goes back to the first match one time. The box says Wrapped.</p></div>
+      <div class="card"><div class="icon">▶</div><h3>Does not play the row</h3>
+        <p>The matching row is scrolled into view and the matching text is highlighted. Playback is left alone.</p></div>
+      <div class="card"><div class="icon">—</div><h3>Hides when lyrics or the queue is open</h3>
+        <p>The button is removed while the lyrics view or the play queue is open, and the search box closes.</p></div>
+      <div class="card"><div class="icon">⧉</div><h3>Sits under the translator</h3>
+        <p>The find button is directly under the lyrics translator button. The translation panel stacks above the search button, and opening translation closes the search box.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="together">
+  <div class="wrap">
+    <h2>Works with Lyrics Translate</h2>
+    <p class="sub">The two extensions work together on Amazon Music with seamless compatibility: the translator button and the find button stack, and opening lyrics does not fight search.</p>
+    <div class="grid">
+      <div class="card"><h3>Stacked buttons</h3><p>The translator button stays on top. Find in Playlist is the button under it, on the same right edge. The search box opens below that.</p></div>
+      <div class="card"><h3>Opening translation closes search</h3><p>When the translation panel opens, the search box closes. The panel stacks above the search button, so the two controls do not cover each other.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <h2>Install</h2>
+    <div class="grid">
+      <div class="card"><h3>Load unpacked</h3>
+        <ol class="steps">
+          <li>Download the ZIP from <a href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music">GitHub</a> (Code, then Download ZIP) and unzip it, or clone the repo.</li>
+          <li>Open <code>edge://extensions</code> (in Chrome: <code>chrome://extensions</code>).</li>
+          <li>Turn on <b>Developer mode</b>.</li>
+          <li>Click <b>Load unpacked</b> and pick the folder that contains <code>manifest.json</code>.</li>
+          <li>Open a playlist on <a href="https://music.amazon.com">music.amazon.com</a>.</li>
+        </ol>
+        <p style="margin-top:14px"><a class="btn primary" href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music">Get it on GitHub</a></p></div>
+      <div class="card"><h3>Where it runs</h3>
+        <p>Only playlist pages on the English Amazon Music sites: music.amazon.com, .ca, .co.uk, .com.au, .in, and .ae. Other pages on those sites do not show the button. Other regional sites are not included.</p>
+        <p style="margin-top:12px">The in-page button tooltip reads <b>Find in playlist 1.0.8</b>. Press Esc while the search box or the button is focused to close the box. If you scroll away from the current match, the next Find next returns to the nearest match already found.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="disclaimer"><b>Not affiliated with Amazon.</b> This is an independent, unofficial extension. It is not made, endorsed or supported by Amazon. Amazon Music is a trademark of Amazon.com, Inc. or its affiliates.</p>
+  </div>
+</section>
+
+<section id="privacy">
+  <div class="wrap">
+    <h2>Privacy</h2>
+    <div class="grid">
+      <div class="card"><h3>No account</h3><p>There is no sign-in, no analytics, and no server of ours. Removing the extension removes it. Nothing is stored in extension storage.</p></div>
+      <div class="card"><h3>Search stays on the page</h3><p>Titles and artist names are read from the playlist already open in your browser. They are not sent anywhere.</p></div>
+      <div class="card"><h3>What it does not do</h3><p>It does not play the row, read your Amazon account or cookies, or download lyrics. Playlist contents never leave the page.</p></div>
+    </div>
+    <p style="margin-top:20px"><a href="privacy.html">Read the full privacy notes</a></p>
+  </div>
+</section>
+
+<section id="more">
+  <div class="wrap">
+    <h2>More add-ons</h2>
+    <p class="sub">These work together on Amazon Music with seamless compatibility: the translator button and the find button stack, and opening lyrics does not fight search.</p>
+    <div class="card new">
+      <div class="icon">文</div>
+      <h3>Lyrics Translate &amp; Romanize for Amazon Music</h3>
+      <p>Translates the lyrics in the Amazon Music web player and adds romanization for non-Latin scripts. When Amazon has no lyrics for a song, it can show synced lyrics from LRCLIB. The translator button sits above Find in Playlist. Opening the translation panel closes the search box, and the panel stacks above the search button.</p>
+      <p style="margin-top:14px"><a class="btn primary" href="https://noodlesnom.github.io/lyrics-translate-for-amazon-music/">Lyrics Translate site</a> <a class="btn" href="https://github.com/NoodlesNom/lyrics-translate-for-amazon-music">GitHub</a></p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Find in Playlist for Amazon Music · MIT License · © NoodlesNom</p>
+    <p><a href="privacy.html">Privacy</a> · <a href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music">Source code</a> · <a href="https://noodlesnom.github.io/lyrics-translate-for-amazon-music/">Lyrics Translate</a></p>
+  </div>
+</footer>
+</body>
+</html>

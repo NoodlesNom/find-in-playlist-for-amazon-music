@@ -38,11 +38,13 @@ If that category is not in the dashboard, use Productivity. Entertainment is a r
 
 Up to seven terms, 30 characters each, 21 words total.
 
-1. find in playlist
-2. amazon music playlist
-3. playlist search
-4. find song
-5. amazon music
+1. Amazon music
+2. find song
+3. find
+4. playlist search
+5. search playlist
+6. ctrl f
+7. amazon music playlist
 
 ## Privacy notes
 

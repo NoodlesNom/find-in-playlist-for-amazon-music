@@ -79,6 +79,41 @@ ul.ticks li::before { content: "✓"; position: absolute; left: 0; top: 0; color
 .changelog .card h3 { font-size: 20px; }
 .card p.upd-note { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(26, 111, 209, .14); border: 1px solid rgba(26, 111, 209, .45); color: #cdd6da; }
 .card p.upd-note b { color: var(--text); }
+
+.kicker { font-size: 18px; font-weight: 600; color: var(--text); max-width: 720px; margin: 0 0 14px; }
+.search-stage {
+  background:
+    radial-gradient(640px 280px at 72% 0%, rgba(37, 209, 218, .20), transparent 70%),
+    radial-gradient(480px 240px at 10% 100%, rgba(26, 111, 209, .16), transparent 70%),
+    #13181b;
+  padding: 64px 24px 72px;
+  display: flex;
+  justify-content: center;
+}
+.search-demo { display: flex; flex-direction: column; align-items: flex-end; gap: 16px; width: min(560px, 100%); }
+.demo-btn {
+  width: 64px; height: 64px; border-radius: 50%;
+  border: 2px solid #25d1da; background: rgba(20, 22, 23, .92); color: #25d1da;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+}
+.demo-btn svg { width: 32px; height: 32px; display: block; }
+.demo-pop {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  width: 100%; padding: 16px;
+  border: 2px solid #3a3f41; border-radius: 20px; background: #0f1111;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, .45);
+}
+.demo-input {
+  flex: 1 1 180px; min-width: 0; height: 56px;
+  border: 2px solid #25d1da; border-radius: 12px; background: #1c1f20;
+  color: rgba(255, 255, 255, .45); font: 26px/56px system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding: 0 16px;
+}
+.demo-go {
+  height: 56px; border-radius: 12px; background: #25d1da; color: #0f1111;
+  font: 600 26px/56px system-ui, -apple-system, "Segoe UI", sans-serif; padding: 0 20px;
+}
 @media (max-width: 860px) {
   .split, .split.rev, .popup-wrap, .grid.five { grid-template-columns: 1fr; }
   .grid.five > .card, .grid.five > .card:nth-child(n+4) { grid-column: auto; }

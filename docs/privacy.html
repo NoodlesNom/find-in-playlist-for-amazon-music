@@ -25,7 +25,8 @@
     <li>It is a content script on the English Amazon Music sites: music.amazon.com, .ca, .co.uk, .com.au, .in, and .ae.</li>
     <li>The button and the search box appear only on playlist pages.</li>
     <li>It reads song titles and artist names that are already shown in that playlist.</li>
-    <li>It scrolls the playlist in the page so songs that are not loaded yet can be matched, then scrolls the matching row into view and highlights the matching text.</li>
+    <li>It works where Ctrl+F doesn't, and it automatically scrolls to load songs on long playlists, then scrolls the matching row into view and highlights the matching text.</li>
+    <li>After it scrolls to a song once, it remembers that song's position in the playlist while the page stays open. That memory stays in the page. Nothing is written to extension storage.</li>
     <li>The current search is kept in the page while that playlist stays open. Nothing is written to extension storage. There is no background script and no account.</li>
   </ul>
 
@@ -38,15 +39,12 @@
     <li>It does not download or display lyrics.</li>
   </ul>
 
-  <h2>The lyrics translator</h2>
-  <p>If <a href="https://noodlesnom.github.io/lyrics-translate-for-amazon-music/">Lyrics Translate &amp; Romanize for Amazon Music</a> is also installed, the find button sits under that extension's button. Opening the translation panel closes this extension's search box. That is a local page event. This extension still does not send playlist contents anywhere. The translator has its own privacy policy.</p>
-
   <p><a href="./">Back to Find in Playlist</a></p>
 </main>
 <footer>
   <div class="wrap">
     <p>Find in Playlist for Amazon Music · MIT License · © NoodlesNom</p>
-    <p><a href="https://noodlesnom.github.io/lyrics-translate-for-amazon-music/">Lyrics Translate</a> · <a href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music">Source code</a></p>
+    <p><a href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music">Source code</a></p>
   </div>
 </footer>
 </body>

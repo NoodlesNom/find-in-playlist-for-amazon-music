@@ -29,9 +29,10 @@
     <p class="kicker">Amazon Music on the web has no native playlist search.</p>
     <p class="lead">Find in Playlist for Amazon Music is a free Microsoft Edge extension. On a playlist page, type part of a title or an artist and choose Find next. The match is a case-insensitive substring. It works where Ctrl+F doesn't, and it automatically scrolls to load songs on long playlists. It scrolls the row into view. It does not play it. It only needs to scroll to a song once, and it will remember that song's position in the playlist.</p>
     <div class="buttons">
-      <a class="btn primary" href="https://microsoftedge.microsoft.com/addons/detail/find-in-playlist-for-amazon-music/0RDCKFWHRJ4H">Get it on Microsoft Edge</a>
-      <a class="btn" href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music" title="Source and load-unpacked install">Get it on GitHub</a>
+      <a class="btn primary" href="https://microsoftedge.microsoft.com/addons/detail/find-in-playlist-for-amazon-music/0RDCKFWHRJ4H">Get it on Microsoft Edge<span class="bver" data-ver="store"></span></a>
+      <a class="btn" href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music/releases/latest" title="Download the ZIP and load it unpacked">Get it on GitHub<span class="bver" data-ver="github"></span></a>
     </div>
+    <p class="note versions">Microsoft Add-ons store updates can take up to a week because Microsoft reviews each one. The GitHub version is always the newest. <a href="#install">See install options</a>.</p>
     <p class="note">Free and open source (MIT). No account, no analytics. Not affiliated with Amazon.</p>
     <div class="shot search-stage" role="img" aria-label="The Find in Playlist search box: a round search button above a field labeled Song or artist and a Find next button.">
       <div class="search-demo">
@@ -62,6 +63,8 @@
         <p>It only needs to scroll to a song once, and it will remember that song's position in the playlist.</p></div>
       <div class="card"><div class="icon">▶</div><h3>Does not play the row</h3>
         <p>The matching row is scrolled into view and the matching text is highlighted. Playback is left alone.</p></div>
+      <div class="card"><div class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M2.5 12s3.3-5 9.5-5 9.5 5 9.5 5-3.3 5-9.5 5-9.5-5-9.5-5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></div><h3>Only on playlist pages</h3>
+        <p>The search button hides when you are not viewing a playlist, so it does not clutter the player.</p></div>
     </div>
   </div>
 </section>
@@ -70,19 +73,23 @@
   <div class="wrap">
     <h2>Install</h2>
     <div class="grid">
-      <div class="card"><h3>Load unpacked</h3>
+      <div class="card"><h3>From Microsoft Edge Add-ons</h3>
+        <p>The easiest way: install it from the official store with one click, and Edge keeps it updated automatically. Store copies never contact GitHub.</p>
+        <p style="margin-top:14px"><a class="btn primary" href="https://microsoftedge.microsoft.com/addons/detail/find-in-playlist-for-amazon-music/0RDCKFWHRJ4H">Get it on Microsoft Edge<span class="bver" data-ver="store"></span></a></p></div>
+      <div class="card"><h3>Load unpacked (Chrome and other browsers)</h3>
         <ol class="steps">
-          <li>Download the ZIP from <a href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music">GitHub</a> (Code, then Download ZIP) and unzip it, or clone the repo.</li>
+          <li>Download the ZIP from the <a href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music/releases/latest">latest release</a> and unzip it (or clone the repo and use its <code>extension</code> folder).</li>
           <li>Open <code>edge://extensions</code> (in Chrome: <code>chrome://extensions</code>).</li>
           <li>Turn on <b>Developer mode</b>.</li>
           <li>Click <b>Load unpacked</b> and pick the folder that contains <code>manifest.json</code>.</li>
           <li>Open a playlist on <a href="https://music.amazon.com">music.amazon.com</a>.</li>
         </ol>
-        <p style="margin-top:14px"><a class="btn primary" href="https://microsoftedge.microsoft.com/addons/detail/find-in-playlist-for-amazon-music/0RDCKFWHRJ4H">Get it on Microsoft Edge</a> <a class="btn" href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music">Get it on GitHub</a></p></div>
+        <p style="margin-top:14px"><a class="btn" href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music/releases/latest" title="Download the ZIP and load it unpacked">Get it on GitHub<span class="bver" data-ver="github"></span></a></p></div>
       <div class="card"><h3>Where it runs</h3>
         <p>Only playlist pages on the English Amazon Music sites: music.amazon.com, .ca, .co.uk, .com.au, .in, and .ae. Other pages on those sites do not show the button. Other regional sites are not included.</p>
         <p style="margin-top:12px">The in-page button tooltip reads <b>Find in playlist 1.0.8</b>. Press Esc while the search box or the button is focused to close the box. If you scroll away from the current match, the next Find next returns to the nearest match already found.</p></div>
     </div>
+    <p class="note versions" style="margin-top:18px">Microsoft Add-ons store updates can take up to a week because Microsoft reviews each one. The GitHub version is always the newest. <a href="#features">See what's included</a>.</p>
   </div>
 </section>
 
@@ -123,5 +130,24 @@
     <p><a href="privacy.html">Privacy</a> · <a href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music">Source code</a></p>
   </div>
 </footer>
+<script>
+// Version numbers in the install buttons: versions.json is on this same site (updated by a GitHub Actions workflow every
+// 6 hours and on each release), so visitors' browsers make no third-party requests. If it can't load, the buttons just show no version.
+fetch('versions.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : Promise.reject(r.status))).then((v) => {
+  const ok = (x) => typeof x === 'string' && /^\d+(\.\d+){1,3}$/.test(x);
+  const at = new Date(v.checked);
+  const when = isNaN(at) ? '' : 'Version checked ' + at.toLocaleString();
+  document.querySelectorAll('[data-ver]').forEach((el) => {
+    const x = v[el.dataset.ver];
+    if (!ok(x)) return;
+    el.textContent = ' (v' + x + ')';
+    if (when) el.parentElement.title = (el.parentElement.title ? el.parentElement.title + '. ' : '') + when;
+  });
+  // The "store can lag behind GitHub" note only matters while GitHub is ahead; hide it when both show the same version.
+  if (ok(v.store) && ok(v.github) && v.store === v.github) {
+    document.querySelectorAll('.note.versions').forEach((el) => { el.hidden = true; });
+  }
+}).catch(() => {});
+</script>
 </body>
 </html>

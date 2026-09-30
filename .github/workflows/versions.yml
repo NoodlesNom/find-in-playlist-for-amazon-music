@@ -1,0 +1,93 @@
+# Keeps docs/versions.json (the version shown on the install buttons) up to date.
+# Reads the public Edge Add-ons version endpoint and this repo's latest release, and commits the file only when a version
+# changed. If a fetch fails, the previous value for that field is kept.
+# Pages is published from a branch (main, /docs), and commits pushed with GITHUB_TOKEN don't trigger a Pages build, so after
+# a commit the workflow asks for one through the Pages API (the only reason for pages: write).
+name: Update versions.json
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: versions-json
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Fetch versions
+        id: v
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          f=docs/versions.json
+          old_store=$(jq -r '.store // empty' "$f" 2>/dev/null || true)
+          old_github=$(jq -r '.github // empty' "$f" 2>/dev/null || true)
+          re='^[0-9]+(\.[0-9]+){1,3}$'
+
+          store=$(curl -fsS --max-time 20 --retry 2 \
+            'https://microsoftedge.microsoft.com/addons/getproductdetails/0RDCKFWHRJ4H' \
+            | jq -r 'select(.name == "Find in Playlist for Amazon Music") | .version // empty' || true)
+          if [[ ! "$store" =~ $re ]]; then
+            echo "::warning::Could not read the Edge Add-ons version; keeping '${old_store}'"
+            store=$old_store
+          fi
+
+          github=$(curl -fsS --max-time 20 --retry 2 \
+            -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/latest" \
+            | jq -r '.tag_name // empty' | sed 's/^v//' || true)
+          if [[ ! "$github" =~ $re ]]; then
+            echo "::warning::Could not read the latest GitHub release; keeping '${old_github}'"
+            github=$old_github
+          fi
+
+          echo "Store: '$store' (was '$old_store') · GitHub: '$github' (was '$old_github')"
+          if [[ "$store" == "$old_store" && "$github" == "$old_github" ]]; then
+            echo "No change."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          jq -nc --arg s "$store" --arg g "$github" --arg c "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{store: (if $s == "" then null else $s end), github: (if $g == "" then null else $g end), checked: $c}' > "$f"
+          cat "$f"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "msg=versions.json: store v${store:-?}, GitHub v${github:-?}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push
+        if: steps.v.outputs.changed == 'true'
+        shell: bash
+        env:
+          MSG: ${{ steps.v.outputs.msg }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/versions.json
+          git commit -m "$MSG"
+          for i in 1 2 3; do
+            git push origin HEAD:main && exit 0
+            sleep 5
+            git pull --rebase origin main
+          done
+          exit 1
+
+      - name: Request a Pages build
+        if: steps.v.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X POST "repos/$GITHUB_REPOSITORY/pages/builds" --jq '.status'

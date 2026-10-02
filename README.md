@@ -2,7 +2,7 @@
 
 A free Microsoft Edge extension that finds a song inside an Amazon Music playlist. Version 1.0.9.
 
-It only runs on Amazon Music playlist pages. A floating button sits under the [Lyrics Translate & Romanize for Amazon Music](https://noodlesnom.github.io/lyrics-translate-for-amazon-music/) button. **Find next** searches for a case-insensitive substring of the title or artist, including songs that are not loaded yet. It scrolls the matching row into view and highlights the match. It does not play the row. After the last match, the next search wraps once, back to the first match. The button hides when lyrics, the queue, or the Local Files playlist is open.
+It only runs on Amazon Music playlist pages. A floating button sits under the [Lyrics Translate & Romanize for Amazon Music](https://noodlesnom.github.io/lyrics-translate-for-amazon-music/) button. **Find next** searches for a case-insensitive substring of the title or artist, including songs that are not loaded yet. It scrolls the matching row into view and highlights the match. After the last match, the next search wraps once, back to the first match. The button hides when lyrics, the queue, or the Local Files playlist is open.
 
 The two extensions work together on Amazon Music with seamless compatibility: the translator button and the find button stack, and opening lyrics does not fight search. The translation panel stacks above the search button, and opening translation closes the search box.
 

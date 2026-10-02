@@ -1219,7 +1219,7 @@
     btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'amps-btn';
-    btn.title = 'Find in playlist 1.0.8';
+    btn.title = 'Find in playlist 1.0.9';
     btn.setAttribute('aria-label', 'Find in playlist');
     btn.setAttribute('aria-expanded', 'false');
     btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 15.5 L20 20.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
@@ -1251,8 +1251,19 @@
   }
 
   function overlayOpen() {
+    // Queue view and lyrics/stage view. Both stay hidden; do not drop either selector.
     const nodes = document.querySelectorAll('[aria-label="Minimize"][data-testid*="OpenMiniPlayerIconButton"], [data-testid="PlayQueue_Header"]');
     for (const el of nodes) if (shown(el)) return true;
+    return false;
+  }
+
+  function localPlaceholderPage() {
+    const nodes = document.querySelectorAll('h1, h2, [role="heading"]');
+    for (const el of nodes) {
+      if (!el || (el.closest && el.closest('.amps-btn, .amps-pop'))) continue;
+      const text = ((el.textContent || '').replace(/\s+/g, ' ')).trim();
+      if (text === 'LOCAL PLACEHOLDER' || text === 'Local Files') return true;
+    }
     return false;
   }
 
@@ -1276,7 +1287,7 @@
     }
     if (key) lastKey = key;
     lastPath = path;
-    if (overlayOpen()) {
+    if (overlayOpen() || localPlaceholderPage()) {
       if (pop) closePop();
       if (btn) { btn.remove(); btn = null; }
       return;

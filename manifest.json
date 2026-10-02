@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Find in Playlist for Amazon Music",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Find the next song in an Amazon Music playlist by title or artist, including tracks that are not loaded yet.",
   "host_permissions": [
     "https://music.amazon.com/*",

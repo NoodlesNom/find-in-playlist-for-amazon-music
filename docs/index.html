@@ -24,7 +24,7 @@
 
 <div class="hero">
   <div class="wrap">
-    <a class="pill" href="#features"><b>1.0.8</b> Playlist pages only &rarr;</a>
+    <a class="pill" href="#features"><b>1.0.9</b> Playlist pages only &rarr;</a>
     <h1>Find any song in your playlist</h1>
     <p class="kicker">Amazon Music on the web has no native playlist search.</p>
     <p class="lead">Find in Playlist for Amazon Music is a free Microsoft Edge extension. On a playlist page, type part of a title or an artist and choose Find next. The match is a case-insensitive substring. It works where Ctrl+F doesn't, and it automatically scrolls to load songs on long playlists. It scrolls the row into view. It does not play it. It only needs to scroll to a song once, and it will remember that song's position in the playlist.</p>
@@ -64,7 +64,7 @@
       <div class="card"><div class="icon">▶</div><h3>Does not play the row</h3>
         <p>The matching row is scrolled into view and the matching text is highlighted. Playback is left alone.</p></div>
       <div class="card"><div class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M2.5 12s3.3-5 9.5-5 9.5 5 9.5 5-3.3 5-9.5 5-9.5-5-9.5-5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></div><h3>Only on playlist pages</h3>
-        <p>The search button hides when you are not viewing a playlist, so it does not clutter the player.</p></div>
+        <p>The search button hides when you are not viewing a playlist, so it does not clutter the player. Search stays hidden on the Local Files playlist as well as the queue and lyrics.</p></div>
     </div>
   </div>
 </section>
@@ -87,7 +87,7 @@
         <p style="margin-top:14px"><a class="btn" href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music/releases/latest" title="Download the ZIP and load it unpacked">Get it on GitHub<span class="bver" data-ver="github"></span></a></p></div>
       <div class="card"><h3>Where it runs</h3>
         <p>Only playlist pages on the English Amazon Music sites: music.amazon.com, .ca, .co.uk, .com.au, .in, and .ae. Other pages on those sites do not show the button. Other regional sites are not included.</p>
-        <p style="margin-top:12px">The in-page button tooltip reads <b>Find in playlist 1.0.8</b>. Press Esc while the search box or the button is focused to close the box. If you scroll away from the current match, the next Find next returns to the nearest match already found.</p></div>
+        <p style="margin-top:12px">The in-page button tooltip reads <b>Find in playlist 1.0.9</b>. Press Esc while the search box or the button is focused to close the box. If you scroll away from the current match, the next Find next returns to the nearest match already found.</p></div>
     </div>
     <p class="note versions" style="margin-top:18px">Microsoft Add-ons store updates can take up to a week because Microsoft reviews each one. The GitHub version is always the newest. <a href="#features">See what's included</a>.</p>
   </div>
@@ -114,12 +114,19 @@
 <section id="more">
   <div class="wrap">
     <h2>More add-ons</h2>
-    <p class="sub">These work together on Amazon Music with seamless compatibility: the translator button and the find button stack, and opening lyrics does not fight search.</p>
+    <p class="sub">These work together on Amazon Music with seamless compatibility: the translator button, the find button, and the Song History button stack, and opening lyrics does not fight search.</p>
     <div class="card new">
       <div class="icon">文</div>
       <h3>Lyrics Translate &amp; Romanize for Amazon Music</h3>
       <p>Translates the lyrics in the Amazon Music web player and adds romanization for non-Latin scripts. When Amazon has no lyrics for a song, it can show synced lyrics from LRCLIB. The translator button sits above Find in Playlist. Opening the translation panel closes the search box, and the panel stacks above the search button.</p>
       <p style="margin-top:14px"><a class="btn primary" href="https://noodlesnom.github.io/lyrics-translate-for-amazon-music/">Lyrics Translate site</a> <a class="btn" href="https://github.com/NoodlesNom/lyrics-translate-for-amazon-music">GitHub</a></p>
+    </div>
+
+    <div class="card new">
+      <div class="icon">+</div>
+      <h3>History Playlist for Amazon Music</h3>
+      <p>On the expanded Song History page, a Make playlist button asks for a playlist name and how many songs. It skips songs already counted, creates a new playlist, and loads that playlist with a full page load. The toolbar icon opens Song History.</p>
+      <p style="margin-top:14px"><a class="btn primary" href="https://noodlesnom.github.io/history-playlist-for-amazon-music/">History Playlist site</a> <a class="btn" href="https://github.com/NoodlesNom/history-playlist-for-amazon-music">GitHub</a></p>
     </div>
   </div>
 </section>
@@ -127,7 +134,7 @@
 <footer>
   <div class="wrap">
     <p>Find in Playlist for Amazon Music · MIT License · © NoodlesNom</p>
-    <p><a href="privacy.html">Privacy</a> · <a href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music">Source code</a></p>
+    <p><a href="privacy.html">Privacy</a> · <a href="https://github.com/NoodlesNom/find-in-playlist-for-amazon-music">Source code</a> · <a href="https://noodlesnom.github.io/history-playlist-for-amazon-music/">History Playlist</a></p>
   </div>
 </footer>
 <script>

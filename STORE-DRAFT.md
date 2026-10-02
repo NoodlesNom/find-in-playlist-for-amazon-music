@@ -2,7 +2,7 @@
 
 Do not submit this. Paste it into Partner Center only when you choose to publish.
 
-The short description is not a separate store field you can type. Microsoft Edge Add-ons uses the `description` string in `manifest.json`. That string is already set to the short description below. The extension name in the manifest is already the name below. Version in the package is 1.0.8. This draft was not submitted.
+The short description is not a separate store field you can type. Microsoft Edge Add-ons uses the `description` string in `manifest.json`. That string is already set to the short description below. The extension name in the manifest is already the name below. Version in the package is 1.0.9. This draft was not submitted.
 
 ## Name
 
@@ -22,7 +22,7 @@ A round button appears at the top right of the player, directly under the Lyrics
 
 Tracks that are not loaded yet are included. The extension scrolls the playlist so later songs can be searched, then stops on the next match. After the last match, the next search wraps once, back to the first match, and the box says Wrapped.
 
-The button hides when the lyrics view or the queue is open. It works alongside Lyrics Translate and Romanize for Amazon Music with seamless compatibility: the translator button and the find button stack, the translation panel sits above the search button, and opening translation closes the search box. Opening lyrics does not fight search.
+The button hides when the lyrics view, the queue, or the Local Files playlist is open. Search stays hidden on the Local Files playlist as well as the queue and lyrics. It works alongside Lyrics Translate and Romanize for Amazon Music with seamless compatibility: the translator button and the find button stack, the translation panel sits above the search button, and opening translation closes the search box. Opening lyrics does not fight search.
 
 There is no account. Searching happens on the page in your browser. Playlist titles and artist names are not sent anywhere.
 

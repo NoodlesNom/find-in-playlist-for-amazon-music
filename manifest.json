@@ -1,17 +1,25 @@
 {
   "manifest_version": 3,
   "name": "Find in Playlist for Amazon Music",
-  "version": "1.0.9",
+  "version": "1.1.0",
   "description": "Find the next song in an Amazon Music playlist by title or artist, including tracks that are not loaded yet.",
-  "host_permissions": [
-    "https://music.amazon.com/*",
-    "https://music.amazon.ca/*",
-    "https://music.amazon.co.uk/*",
-    "https://music.amazon.com.au/*",
-    "https://music.amazon.in/*",
-    "https://music.amazon.ae/*"
-  ],
   "content_scripts": [
+    {
+      "matches": [
+        "https://music.amazon.com/*",
+        "https://music.amazon.ca/*",
+        "https://music.amazon.co.uk/*",
+        "https://music.amazon.com.au/*",
+        "https://music.amazon.in/*",
+        "https://music.amazon.ae/*"
+      ],
+      "js": [
+        "playlist-hook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": false
+    },
     {
       "matches": [
         "https://music.amazon.com/*",

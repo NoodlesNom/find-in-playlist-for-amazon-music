@@ -21,6 +21,13 @@
   let kept = null;
   let books = new Map();
   let userScrolled = false;
+  let catalog = null;
+  let reach = null;
+  let indexBase = null;
+  let askedKey = '';
+  // While a saved jump is restoring scroll height, do not overwrite the
+  // position map with the temporary window.
+  let holdReach = false;
 
   function onPlaylist() {
     const p = location.pathname || '';
@@ -877,15 +884,776 @@
   }
 
 
+  function requestCatalog() {
+    try {
+      if (!window.postMessage || !location.origin || location.origin === 'null') return;
+      window.postMessage({ source: 'amps-ext', type: 'pull' }, location.origin);
+    } catch (e) {}
+  }
+
+  function onCatalogMessage(event) {
+    if (!event || event.source !== window) return;
+    let origin = '';
+    try { origin = location.origin || ''; } catch (e) {}
+    if (!origin || origin === 'null' || event.origin !== origin) return;
+    const data = event.data;
+    if (!data || data.source !== 'amps-page' || data.type !== 'catalog') return;
+    const incoming = Array.isArray(data.tracks) ? data.tracks : [];
+    const tracks = [];
+    for (let i = 0; i < incoming.length; i++) {
+      const t = incoming[i] || {};
+      tracks.push({
+        title: typeof t.title === 'string' ? t.title : '',
+        artist: typeof t.artist === 'string' ? t.artist : ''
+      });
+    }
+    const key = typeof data.key === 'string' ? data.key : '';
+    const pages = Number(data.pages) || 0;
+    if (catalog && catalog.key === key && pages < (catalog.pages || 0)) return;
+    catalog = {
+      key: key,
+      tracks: tracks,
+      pages: pages,
+      done: !!data.done,
+      error: data.error ? String(data.error) : '',
+      partial: !!data.partial
+    };
+  }
+
+  function clearReach() {
+    reach = null;
+    indexBase = null;
+  }
+
+  function trackMatchesQuery(track, q) {
+    const n = clean(q).toLowerCase();
+    if (!n || !track) return false;
+    const title = nameText(track.title).toLowerCase();
+    const artist = nameText(track.artist).toLowerCase();
+    if (title && title.indexOf(n) !== -1) return true;
+    if (artist && artist.indexOf(n) !== -1) return true;
+    return false;
+  }
+
+  function matchIndices(tracks, q) {
+    const out = [];
+    if (!tracks) return out;
+    for (let i = 0; i < tracks.length; i++) {
+      if (trackMatchesQuery(tracks[i], q)) out.push(i);
+    }
+    return out;
+  }
+
+  // Next catalog index after cursor. Wrap only once the cursor is a real hit.
+  // After the last hit, every later Find starts again at the first hit.
+  function pickCatalogIndex(indices, cursor) {
+    if (!indices || !indices.length) return null;
+    const from = cursor == null ? -1 : cursor;
+    for (let i = 0; i < indices.length; i++) {
+      if (indices[i] > from) return { index: indices[i], wrapped: false };
+    }
+    if (from >= 0) return { index: indices[0], wrapped: true };
+    return { index: indices[0], wrapped: false };
+  }
+
+  function sameName(a, b) {
+    const x = nameText(a).toLowerCase();
+    const y = nameText(b).toLowerCase();
+    return !!(x && y && x === y);
+  }
+
+  function sameTrack(row, track) {
+    if (!row || !track || !sameName(row.title, track.title)) return false;
+    const ra = nameText(row.artist).toLowerCase();
+    const ta = nameText(track.artist).toLowerCase();
+    if (!ra || !ta) return true;
+    if (ra === ta) return true;
+    if (ra.indexOf(ta) !== -1 || ta.indexOf(ra) !== -1) return true;
+    return false;
+  }
+
+  function migrateDomKeys() {
+    if (!reach || indexBase == null) return;
+    const next = new Map();
+    reach.positions.forEach((top, key) => {
+      if (typeof key === 'string' && key.indexOf('n:') === 0) {
+        const n = parseInt(key.slice(2), 10);
+        if (Number.isFinite(n)) {
+          const i = n - indexBase;
+          if (i >= 0) {
+            next.set(i, top);
+            if (i > reach.maxIndex) reach.maxIndex = i;
+            return;
+          }
+        }
+      }
+      next.set(key, top);
+    });
+    reach.positions = next;
+  }
+
+  function learnIndexBase(row) {
+    if (indexBase != null || !catalog || !catalog.tracks || !row || row.index == null) return;
+    const tracks = catalog.tracks;
+    const bases = [1, 0];
+    let titleBase = null;
+    for (let b = 0; b < bases.length; b++) {
+      const i = row.index - bases[b];
+      if (i < 0 || i >= tracks.length) continue;
+      if (sameTrack(row, tracks[i])) {
+        indexBase = bases[b];
+        migrateDomKeys();
+        return;
+      }
+      if (sameName(row.title, tracks[i].title)) {
+        titleBase = titleBase == null ? bases[b] : -1;
+      }
+    }
+    if (titleBase != null && titleBase >= 0) {
+      indexBase = titleBase;
+      migrateDomKeys();
+    }
+  }
+
+  function rowCatalogIndex(row) {
+    if (!row || !catalog || !catalog.tracks || !catalog.tracks.length) return null;
+    learnIndexBase(row);
+    if (row.index != null && indexBase != null) {
+      const i = row.index - indexBase;
+      if (i >= 0 && i < catalog.tracks.length) {
+        const track = catalog.tracks[i];
+        if (!row.title || sameName(row.title, track.title) || sameTrack(row, track)) return i;
+      }
+    }
+    if (row.title) {
+      const hits = [];
+      const titled = [];
+      for (let i = 0; i < catalog.tracks.length; i++) {
+        if (sameTrack(row, catalog.tracks[i])) hits.push(i);
+        else if (sameName(row.title, catalog.tracks[i].title)) titled.push(i);
+      }
+      if (hits.length === 1) return hits[0];
+      if (!hits.length && titled.length === 1) return titled[0];
+    }
+    return null;
+  }
+
+  // Index -> scrollTop for this playlist. Cleared only when the playlist
+  // changes. maxScroll is the largest scroll range (scrollHeight - clientHeight)
+  // seen after the virtual list has been extended. Jumping back to the top
+  // shrinks the live scroll height and must not lower maxScroll or maxHeight.
+  function positionBook(scroller) {
+    const key = playlistKey() || '';
+    if (!scroller || !scroller.isConnected) return null;
+    if (!reach || reach.key !== key) {
+      reach = {
+        key: key,
+        scroller: scroller,
+        positions: new Map(),
+        maxIndex: -1,
+        maxScroll: 0,
+        maxHeight: 0,
+        bottomed: false,
+        rowHeight: 0,
+        header: 0
+      };
+    }
+    reach.scroller = scroller;
+    rememberExtent(scroller, reach);
+    return reach;
+  }
+
+  // Never decreases. bottomed flips once the last catalog track has been
+  // mounted, or the caller has seen the list refuse to grow at the bottom.
+  function rememberExtent(scroller, book) {
+    if (!scroller || !book) return;
+    const height = scroller.scrollHeight || 0;
+    const span = Math.max(0, height - (scroller.clientHeight || 0));
+    if (height > (book.maxHeight || 0)) book.maxHeight = height;
+    if (span > (book.maxScroll || 0)) book.maxScroll = span;
+    const last = catalog && catalog.tracks && catalog.tracks.length ? catalog.tracks.length - 1 : -1;
+    if (last >= 0 && book.maxIndex >= last) book.bottomed = true;
+  }
+
+  // scrollTop = index / lastIndex * maxScroll. playlistDetail order is the index.
+  function indexScrollTop(index, lastIndex, maxScroll) {
+    if (typeof index !== 'number' || index < 0) return null;
+    if (!(maxScroll > 0) || !(lastIndex > 0)) return null;
+    return (index / lastIndex) * maxScroll;
+  }
+
+  // scrollTop = header + index * measured row height.
+  function pitchScrollTop(index, rowHeight, header) {
+    if (typeof index !== 'number' || index < 0) return null;
+    if (!(rowHeight > 0)) return null;
+    return (header || 0) + index * rowHeight;
+  }
+
+  function bookScrollTop(book, index) {
+    if (!book || typeof index !== 'number' || index < 0) return null;
+    const last = catalog && catalog.tracks && catalog.tracks.length ? catalog.tracks.length - 1 : -1;
+    if (book.bottomed && book.maxScroll > 0 && last > 0) return indexScrollTop(index, last, book.maxScroll);
+    if (book.bottomed && book.rowHeight > 0) return pitchScrollTop(index, book.rowHeight, book.header || 0);
+    if (index > book.maxIndex) return null;
+    if (book.rowHeight > 0) {
+      const pitched = pitchScrollTop(index, book.rowHeight, book.header || 0);
+      if (pitched != null && (!(book.maxScroll > 0) || pitched <= book.maxScroll + 2)) return pitched;
+    }
+    return closestTop(book, index);
+  }
+
+  function canIndexJump(book, index) {
+    return bookScrollTop(book, index) != null;
+  }
+
+  function rowContentTop(scroller, row) {
+    if (!row) return null;
+    if (row.offset != null) return row.offset;
+    const vo = row.el ? virtualOffset(row.el) : null;
+    if (vo != null) return vo;
+    if (!scroller || !row.el || !row.el.getBoundingClientRect) return null;
+    const sr = scroller.getBoundingClientRect();
+    const rr = row.el.getBoundingClientRect();
+    return (scroller.scrollTop || 0) + (rr.top - sr.top);
+  }
+
+  function notePitch(scroller, book, parsed) {
+    if (!scroller || !book || !parsed || holdReach) return;
+    let heightSum = 0;
+    let heightN = 0;
+    let anchor = null;
+    for (let i = 0; i < parsed.length; i++) {
+      const row = parsed[i];
+      if (row.el && row.el.getBoundingClientRect) {
+        const h = row.el.getBoundingClientRect().height;
+        if (h >= 24 && h <= 160) { heightSum += h; heightN++; }
+      }
+      const idx = rowCatalogIndex(row);
+      const contentTop = rowContentTop(scroller, row);
+      if (idx != null && contentTop != null && (!anchor || idx < anchor.idx)) anchor = { idx: idx, top: contentTop };
+    }
+    if (heightN) {
+      const h = heightSum / heightN;
+      book.rowHeight = book.rowHeight ? book.rowHeight * 0.8 + h * 0.2 : h;
+    }
+    if (anchor && book.rowHeight > 0) {
+      const header = anchor.top - anchor.idx * book.rowHeight;
+      if (Number.isFinite(header)) book.header = book.header ? book.header * 0.8 + header * 0.2 : header;
+    }
+  }
+
+  // Put the remembered content height back so a calculated scrollTop is not
+  // clamped after the virtual list shrinks. This does not scroll through tracks.
+  function restoreScrollRoom(scroller, book) {
+    if (!scroller || !book) return;
+    const need = book.maxHeight || 0;
+    if (!(need > scroller.scrollHeight + 2)) return;
+    const kids = [];
+    const children = scroller.children;
+    for (let i = 0; children && i < children.length; i++) {
+      const el = children[i];
+      if (!el || (el.classList && el.classList.contains('amps-scroll-room'))) continue;
+      kids.push(el);
+    }
+    kids.sort((a, b) => {
+      const ah = parseFloat(a.style && a.style.height) || 0;
+      const bh = parseFloat(b.style && b.style.height) || 0;
+      if (ah || bh) return bh - ah;
+      return (b.offsetHeight || 0) - (a.offsetHeight || 0);
+    });
+    const node = kids[0];
+    if (!node || !node.style) return;
+    const deficit = need - scroller.scrollHeight;
+    const explicit = parseFloat(node.style.height);
+    if (Number.isFinite(explicit) && explicit > 0) {
+      node.style.height = Math.ceil(explicit + deficit) + 'px';
+      return;
+    }
+    const minBase = parseFloat(node.style.minHeight);
+    const start = Number.isFinite(minBase) ? minBase : (node.offsetHeight || 0);
+    node.style.minHeight = Math.ceil(start + deficit) + 'px';
+  }
+
+  function notePositions(scroller, parsed) {
+    if (!scroller || !parsed || !parsed.length) return;
+    const book = positionBook(scroller);
+    if (!book) return;
+    const top = scroller.scrollTop || 0;
+    for (let i = 0; i < parsed.length; i++) {
+      const row = parsed[i];
+      const idx = rowCatalogIndex(row);
+      if (idx != null) {
+        if (!(holdReach && book.positions.has(idx))) book.positions.set(idx, top);
+        if (idx > book.maxIndex) book.maxIndex = idx;
+        continue;
+      }
+      if (row && row.index != null) {
+        const nk = 'n:' + row.index;
+        if (!(holdReach && book.positions.has(nk))) book.positions.set(nk, top);
+      }
+    }
+    notePitch(scroller, book, parsed);
+    rememberExtent(scroller, book);
+  }
+
+  function nearestLower(book, index) {
+    if (!book) return null;
+    if (book.positions.has(index)) return book.positions.get(index);
+    let best = -1;
+    let top = null;
+    book.positions.forEach((value, key) => {
+      if (typeof key !== 'number' || key > index || key < best) return;
+      best = key;
+      top = value;
+    });
+    return top;
+  }
+
+  // Closest stored scrollTop at or around this index. Used once the index is
+  // inside the range already reached, including when that exact key was stored
+  // on a neighboring row of the same window.
+  function closestTop(book, index) {
+    if (!book || typeof index !== 'number') return null;
+    if (book.positions.has(index)) return book.positions.get(index);
+    let best = null;
+    let dist = Infinity;
+    book.positions.forEach((value, key) => {
+      if (typeof key !== 'number') return;
+      const d = Math.abs(key - index);
+      if (d < dist) { dist = d; best = value; }
+    });
+    return best;
+  }
+
+  function savedTopFor(book, index) {
+    if (!book || typeof index !== 'number') return null;
+    if (index > book.maxIndex) return null;
+    return nearestLower(book, index);
+  }
+
+  function applySavedScroll(scroller, spot) {
+    const book = positionBook(scroller);
+    if (!book) return false;
+    let key = null;
+    if (spot && spot.catalogIndex != null) key = spot.catalogIndex;
+    else if (spot && spot.position != null) key = 'n:' + spot.position;
+    if (key == null) return false;
+    let top = null;
+    if (typeof key === 'number') top = savedTopFor(book, key);
+    else if (book.positions.has(key)) top = book.positions.get(key);
+    if (top == null) return false;
+    const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    if (top > max + 2) return false;
+    scroller.scrollTop = Math.max(0, top);
+    return true;
+  }
+
+  function jumpSavedIndex(scroller, index) {
+    const book = positionBook(scroller);
+    const top = savedTopFor(book, index);
+    if (top == null) return false;
+    const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    if (top > max + 2) return false;
+    scroller.scrollTop = Math.max(0, top);
+    return true;
+  }
+
+  // Set scrollTop to a calculated value. If the list shrank, restore the
+  // remembered content height once. Never walk the scroller to get there.
+  async function reachScrollTop(scroller, top, gen) {
+    if (!scroller || top == null || !Number.isFinite(top) || gen !== generation) return false;
+    const book = positionBook(scroller);
+    const prevHold = holdReach;
+    holdReach = true;
+    try {
+      if (book) restoreScrollRoom(scroller, book);
+      scroller.scrollTop = Math.max(0, top);
+      try { scroller.dispatchEvent(new Event('scroll', { bubbles: true })); } catch (e) {}
+      if (scroller.scrollTop + 2 < top) {
+        if (book) restoreScrollRoom(scroller, book);
+        scroller.scrollTop = Math.max(0, top);
+        try { scroller.dispatchEvent(new Event('scroll', { bubbles: true })); } catch (e2) {}
+      }
+      return scroller.scrollTop + 2 >= top || scroller.scrollTop + 2 >= Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    } finally {
+      holdReach = prevHold;
+    }
+  }
+
+  // Jump from the catalog index. After the list has been extended to the
+  // bottom, scrollTop is index / lastIndex * maxScroll (or row height + header).
+  // Does not walk. A miss does not mean the search should scan the playlist.
+  async function jumpReachedIndex(scroller, index, gen, wrapped) {
+    const book = positionBook(scroller);
+    if (!book || typeof index !== 'number') return false;
+    const top = bookScrollTop(book, index);
+    if (top == null) return false;
+    const prevHold = holdReach;
+    holdReach = true;
+    try {
+      const placed = await reachScrollTop(scroller, top, gen);
+      if (gen !== generation) return false;
+      if (!placed) return false;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        await wait(attempt === 0 ? 120 : 140);
+        if (gen !== generation) return false;
+        const row = mountedCatalogRow(index);
+        if (row) return settleCatalogRow(row, index, wrapped);
+        const span = visibleCatalogSpan();
+        if (!span || !(book.rowHeight > 0)) continue;
+        if (index >= span.min && index <= span.max) continue;
+        const mid = (span.min + span.max) / 2;
+        const shift = (index - mid) * book.rowHeight;
+        if (!Number.isFinite(shift) || Math.abs(shift) < 4) continue;
+        const marked = userScrolled;
+        scroller.scrollTop = Math.max(0, scroller.scrollTop + shift);
+        try { scroller.dispatchEvent(new Event('scroll', { bubbles: true })); } catch (e) {}
+        userScrolled = marked;
+      }
+      return false;
+    } finally {
+      holdReach = prevHold;
+    }
+  }
+
+  function parsedInScroller(raw) {
+    const scroller = raw && raw.length ? pickScroller(raw) : pickScroller(collectRows());
+    const rows = raw || collectRows();
+    const scoped = scroller ? rows.filter((el) => insideScroller(scroller, el)) : rows;
+    return {
+      scroller: scroller,
+      parsed: scoped.map(parseRow).filter((r) => r.title || r.artist)
+    };
+  }
+
+  function mountedCatalogRow(index) {
+    if (!catalog || !catalog.tracks || !catalog.tracks[index]) return null;
+    const track = catalog.tracks[index];
+    const view = parsedInScroller(collectRows());
+    const titleHits = [];
+    for (let i = 0; i < view.parsed.length; i++) {
+      const row = view.parsed[i];
+      if (rowCatalogIndex(row) === index) return row;
+      if (sameName(row.title, track.title)) titleHits.push(row);
+    }
+    if (titleHits.length !== 1) return null;
+    let copies = 0;
+    for (let i = 0; i < catalog.tracks.length; i++) {
+      if (sameName(catalog.tracks[i].title, track.title)) copies++;
+    }
+    return copies === 1 ? titleHits[0] : null;
+  }
+
+  function visibleCatalogSpan() {
+    const view = parsedInScroller(collectRows());
+    let min = Infinity;
+    let max = -1;
+    for (let i = 0; i < view.parsed.length; i++) {
+      const row = view.parsed[i];
+      let n = rowCatalogIndex(row);
+      if (n == null && row.index != null && indexBase != null) n = row.index - indexBase;
+      if (n == null || n < 0) continue;
+      if (n < min) min = n;
+      if (n > max) max = n;
+    }
+    if (max < 0) return null;
+    return { min: min, max: max, scroller: view.scroller };
+  }
+
+  function rowInScrollerView(row) {
+    if (!row || !row.el) return false;
+    const scroller = pickScroller(collectRows());
+    if (!scroller) return false;
+    const sr = scroller.getBoundingClientRect();
+    const rr = row.el.getBoundingClientRect();
+    return rr.bottom > sr.top + 4 && rr.top < sr.bottom - 4;
+  }
+
+  function catalogCursor() {
+    if (session && session.catCursor != null && session.catCursor >= 0) return session.catCursor;
+    if (session && session.anchor) {
+      if (session.anchor.catalogIndex != null) return session.anchor.catalogIndex;
+      const idx = rowCatalogIndex(session.anchor);
+      if (idx != null) return idx;
+    }
+    return -1;
+  }
+
+  function usableCatalog(key) {
+    if (!catalog || (catalog.key || '') !== (key || '')) return null;
+    if (!catalog.done && (!catalog.tracks || !catalog.tracks.length)) return null;
+    return catalog;
+  }
+
+  async function waitForCatalog(gen, q, cursor) {
+    const key = playlistKey();
+    requestCatalog();
+    const start = performance.now();
+    while (gen === generation) {
+      const cat = usableCatalog(key);
+      if (cat) {
+        const choice = pickCatalogIndex(matchIndices(cat.tracks, q), cursor);
+        if (choice && !choice.wrapped) return cat;
+        if (cat.done || performance.now() - start > 20000) return cat;
+      } else if (performance.now() - start > 2500) {
+        return null;
+      }
+      await wait(80);
+    }
+    return null;
+  }
+
+  function settleCatalogRow(row, index, wrapped) {
+    const view = parsedInScroller(collectRows());
+    const scroller = view.scroller;
+    if (row && row.el && row.el.scrollIntoView) {
+      try { row.el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (e) {}
+    }
+    if (scroller && row && row.el) centerRow(scroller, row.el);
+    const track = catalog && catalog.tracks ? catalog.tracks[index] : null;
+    highlight(row.el, {
+      title: row.title || (track && track.title) || '',
+      artist: row.artist || (track && track.artist) || '',
+      query: session.query
+    });
+    session.sawMatch = true;
+    session.catCursor = index;
+    session.anchor = {
+      id: row.id,
+      index: row.index,
+      offset: row.offset,
+      rel: row.offset != null ? row.offset : row.top,
+      el: row.el,
+      catalogIndex: index,
+      places: new Map()
+    };
+    if (scroller) notePositions(scroller, view.parsed.length ? view.parsed : [row]);
+    const top = scroller ? scroller.scrollTop : 0;
+    if (!session.spots.some((sp) => sp.id === row.id)) {
+      session.spots.push({
+        id: row.id,
+        top: top,
+        position: orderPos(row),
+        catalogIndex: index
+      });
+    } else {
+      session.spots.forEach((sp) => {
+        if (sp.id === row.id) {
+          sp.top = top;
+          sp.catalogIndex = index;
+        }
+      });
+    }
+    session.cursor = session.spots.findIndex((sp) => sp.id === row.id);
+    session.returned.add(row.id);
+    setStatus(wrapped ? 'Wrapped' : '');
+    return true;
+  }
+
+  async function walkToCatalogIndex(index, gen, wrapped) {
+    const deadline = performance.now() + BUDGET_MS;
+    let steps = 0;
+    let stagnant = 0;
+    const seen = new Set();
+    let triedSaved = false;
+    let triedJump = false;
+    let walkDir = 0;
+    while (gen === generation && onPlaylist() && performance.now() < deadline && steps < 800) {
+      steps++;
+      const view = parsedInScroller(collectRows());
+      const scroller = view.scroller;
+      const parsed = view.parsed;
+      for (let i = 0; i < parsed.length; i++) seen.add(parsed[i].id);
+      if (scroller) notePositions(scroller, parsed);
+      const row = mountedCatalogRow(index);
+      if (row) return settleCatalogRow(row, index, wrapped);
+      if (!scroller) {
+        setStatus('No scroller');
+        return false;
+      }
+      const span = visibleCatalogSpan();
+      const bookNow = positionBook(scroller);
+      if (!triedJump && bookNow && canIndexJump(bookNow, index)) {
+        triedJump = true;
+        const jumped = await jumpReachedIndex(scroller, index, gen, wrapped);
+        if (gen !== generation || jumped) return jumped;
+      }
+      if (!triedSaved && span && index < span.min) {
+        triedSaved = true;
+        const saved = savedTopFor(bookNow, index);
+        if (saved != null) {
+          const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+          if (saved <= max + 2) {
+            scroller.scrollTop = Math.max(0, saved);
+            await wait(100);
+            if (gen !== generation) return false;
+            continue;
+          }
+        }
+      }
+      if (atBottom(scroller) && (!span || index >= span.max)) {
+        const heightBefore = scroller.scrollHeight;
+        const maxNow = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+        scroller.scrollTop = Math.max(0, maxNow - 40);
+        await wait(60);
+        if (gen !== generation) return false;
+        scroller.scrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+        try {
+          scroller.dispatchEvent(new WheelEvent('wheel', { deltaY: 480, bubbles: true, cancelable: true }));
+          scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
+        } catch (e) {}
+        await wait(220);
+        if (gen !== generation) return false;
+        const grewHeight = scroller.scrollHeight > heightBefore + 24;
+        const grewRows = collectRows().map(parseRow).some((r) => (r.title || r.artist) && r.id && !seen.has(r.id));
+        if (grewHeight || grewRows || !atBottom(scroller)) {
+          stagnant = 0;
+          continue;
+        }
+        const bookStop = positionBook(scroller);
+        if (bookStop && catalog && catalog.done && !catalog.partial && !catalog.error) {
+          bookStop.bottomed = true;
+          rememberExtent(scroller, bookStop);
+        }
+        setStatus('List stopped loading. Reload the page.');
+        return false;
+      }
+      let moved = 0;
+      const raw = collectRows();
+      const scoped = raw.filter((el) => insideScroller(scroller, el));
+      // One direction per walk. Scrolling up toward a song already above the
+      // window must not then advance down past it (or the other way around).
+      if (span && index < span.min) {
+        if (walkDir > 0) { setStatus(''); return false; }
+        walkDir = -1;
+        const before = scroller.scrollTop;
+        const delta = Math.max(120, Math.floor(scroller.clientHeight * 0.7));
+        scroller.scrollTop = Math.max(0, before - delta);
+        moved = before - scroller.scrollTop;
+      } else {
+        if (walkDir < 0) { setStatus(''); return false; }
+        walkDir = 1;
+        moved = advance(scroller, scoped);
+      }
+      await wait(90);
+      if (gen !== generation) return false;
+      const after = collectRows().map(parseRow).filter((r) => r.title || r.artist);
+      const grew = after.some((r) => !seen.has(r.id)) || moved >= 2;
+      if (!grew) {
+        stagnant++;
+        if (stagnant >= 6) {
+          setStatus('List stopped loading. Reload the page.');
+          return false;
+        }
+      } else {
+        stagnant = 0;
+      }
+    }
+    if (gen === generation) setStatus('List stopped loading. Reload the page.');
+    return false;
+  }
+
+  async function revealCatalogIndex(index, gen, wrapped) {
+    const row = mountedCatalogRow(index);
+    if (row) return settleCatalogRow(row, index, wrapped);
+    const scroller = pickScroller(collectRows());
+    if (scroller) {
+      const book = positionBook(scroller);
+      if (book && canIndexJump(book, index)) {
+        const jumped = await jumpReachedIndex(scroller, index, gen, wrapped);
+        if (gen !== generation) return false;
+        // In the loaded range, or the list has been extended to the bottom:
+        // the index sets scrollTop. Do not walk.
+        return jumped;
+      }
+    }
+    setStatus('match found, scrolling');
+    return walkToCatalogIndex(index, gen, wrapped);
+  }
+
+  // A finished pass must not keep those songs excluded. The position map stays.
+  function beginCycle() {
+    if (!session) return;
+    session.returned = new Set();
+    session.anchor = null;
+  }
+
+  async function guideByCatalog(gen, q, fresh, scrolledAway) {
+    const key = playlistKey();
+    const cursor = fresh ? -1 : catalogCursor();
+    const cat = await waitForCatalog(gen, q, cursor);
+    if (gen !== generation) return true;
+    if (!cat) return false;
+    const indices = matchIndices(cat.tracks, q);
+    if (!indices.length) {
+      if (cat.done && !cat.partial && !cat.error) {
+        setStatus('No matches');
+        return true;
+      }
+      return false;
+    }
+    let choice = null;
+    if (!fresh && scrolledAway && cursor >= 0) {
+      const current = mountedCatalogRow(cursor);
+      if (!current || !rowInScrollerView(current)) {
+        const span = visibleCatalogSpan();
+        if (span) {
+          const center = (span.min + span.max) / 2;
+          let best = indices[0];
+          let dist = Infinity;
+          for (let i = 0; i < indices.length; i++) {
+            const d = Math.abs(indices[i] - center);
+            if (d < dist) {
+              dist = d;
+              best = indices[i];
+            }
+          }
+          choice = { index: best, wrapped: false };
+        }
+      }
+    }
+    if (!choice) choice = pickCatalogIndex(indices, cursor);
+    if (!choice) return false;
+    if (choice.wrapped && (!cat.done || cat.partial || cat.error)) return false;
+    if (choice.wrapped) beginCycle();
+    await revealCatalogIndex(choice.index, gen, choice.wrapped && cursor >= 0);
+    if (gen !== generation) return true;
+    // revealCatalogIndex walks only when the index is past the furthest loaded
+    // range. A later index jump must not fall through into another walk.
+    return true;
+  }
+
   async function reveal(spot) {
     const raw = collectRows();
     const scroller = pickScroller(raw);
-    if (scroller) scroller.scrollTop = Math.max(0, spot.top);
-    await wait(100);
-    let row = collectRows().map(parseRow).find((r) => r.id === spot.id);
-    if (!row) {
-      await wait(160);
-      row = collectRows().map(parseRow).find((r) => r.id === spot.id);
+    let row = raw.map(parseRow).find((r) => r.id === spot.id);
+    if (row) {
+      try { row.el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (e) {}
+      if (scroller) centerRow(scroller, row.el);
+    } else if (scroller) {
+      const book = positionBook(scroller);
+      let top = spot.top || 0;
+      if (book && spot.catalogIndex != null) {
+        const saved = savedTopFor(book, spot.catalogIndex);
+        if (saved != null) top = saved;
+      } else if (book && spot.position != null && book.positions.has('n:' + spot.position)) {
+        top = book.positions.get('n:' + spot.position);
+      }
+      const prevHold = holdReach;
+      holdReach = true;
+      let placed = false;
+      try {
+        placed = await reachScrollTop(scroller, top, generation);
+        if (!placed && !applySavedScroll(scroller, spot)) scroller.scrollTop = Math.max(0, Math.min(top, Math.max(0, scroller.scrollHeight - scroller.clientHeight)));
+        await wait(100);
+        row = collectRows().map(parseRow).find((r) => r.id === spot.id);
+        if (!row) {
+          await wait(160);
+          row = collectRows().map(parseRow).find((r) => r.id === spot.id);
+        }
+      } finally {
+        holdReach = prevHold;
+      }
     }
     if (!row) return false;
     const sc = pickScroller(collectRows()) || scroller;
@@ -894,14 +1662,19 @@
       spot.top = sc.scrollTop;
     }
     highlight(row.el, { title: row.title, artist: row.artist, query: session.query });
+    if (scroller) notePositions(scroller, collectRows().map(parseRow).filter((r) => r.title || r.artist));
+    const catIdx = rowCatalogIndex(row);
     session.anchor = {
       id: row.id,
       index: row.index,
       offset: row.offset,
       rel: row.offset != null ? row.offset : row.top,
       el: row.el,
+      catalogIndex: catIdx,
       places: new Map()
     };
+    if (catIdx != null) session.catCursor = catIdx;
+    else if (spot && spot.catalogIndex != null) session.catCursor = spot.catalogIndex;
     const herePos = orderPos(row);
     session.returned = new Set(session.spots.filter((sp) => {
       if (sp.id === row.id) return true;
@@ -932,13 +1705,16 @@
     const qk = q.toLowerCase();
     if (session && session.query && session.query.toLowerCase() !== qk) books.set(session.query.toLowerCase(), session);
     const fresh = !books.has(qk);
-    session = books.get(qk) || { query: q, returned: new Set(), anchor: null, sawMatch: false, spots: [], cursor: -1 };
+    session = books.get(qk) || { query: q, returned: new Set(), anchor: null, sawMatch: false, spots: [], cursor: -1, catCursor: -1 };
     books.set(qk, session);
     let didWrap = false;
 
     try {
       const scrolledAway = userScrolled;
       userScrolled = false;
+      const guided = await guideByCatalog(gen, q, fresh, scrolledAway);
+      if (gen !== generation) return;
+      if (guided) return;
       // Nearest-spot only after the user scrolls away. A Find click must advance, never jump backward.
       if (!fresh && scrolledAway && session.spots && session.spots.length && session.cursor >= 0) {
         const here = session.spots[session.cursor];
@@ -957,16 +1733,31 @@
           if (ok) { setStatus(''); return; }
         }
       }
-      if (!fresh && session.spots && session.spots.length) {
+      if (!fresh && session.spots && session.spots.length && session.cursor >= 0) {
         const ni = nextForwardIndex(session.spots, session.cursor);
         if (ni >= 0) {
-          session.cursor = ni;
-          const ok = await reveal(session.spots[session.cursor]);
+          const ok = await reveal(session.spots[ni]);
           if (gen !== generation) return;
           if (ok) {
+            session.cursor = ni;
             setStatus('');
             return;
           }
+        } else if (session.sawMatch) {
+          // Every match was visited. Start again at the first one. Keep cycling.
+          didWrap = true;
+          beginCycle();
+          const fi = firstSpotIndex(session.spots);
+          const ok = await reveal(session.spots[fi]);
+          if (gen !== generation) return;
+          if (ok) {
+            session.cursor = fi;
+            setStatus('Wrapped');
+            return;
+          }
+          const scroller = pickScroller(collectRows());
+          if (scroller) scroller.scrollTop = 0;
+          await wait(80);
         }
       }
 
@@ -988,6 +1779,7 @@
         const scroller = pickScroller(raw);
         const scoped = scroller ? raw.filter((el) => insideScroller(scroller, el)) : raw;
         const parsed = scoped.map(parseRow).filter((r) => r.title || r.artist);
+        if (scroller) notePositions(scroller, parsed);
         const sig = snapshot(parsed);
         let freshIds = 0;
         for (const r of parsed) {
@@ -1028,11 +1820,14 @@
             session.anchor.el = again.el;
           }
           const scSaved = sc1 || scroller;
+          const catIdx = rowCatalogIndex(hit);
+          if (catIdx != null) session.catCursor = catIdx;
           if (!session.spots.some((sp) => sp.id === hit.id)) {
             session.spots.push({
               id: hit.id,
               top: scSaved ? scSaved.scrollTop : 0,
-              position: orderPos(hit)
+              position: orderPos(hit),
+              catalogIndex: catIdx
             });
           }
           session.cursor = session.spots.findIndex((s) => s.id === hit.id);
@@ -1072,15 +1867,15 @@
           }
           if (!didWrap && session.sawMatch && session.spots && session.spots.length) {
             didWrap = true;
-            session.cursor = firstSpotIndex(session.spots);
-            const ok = await reveal(session.spots[session.cursor]);
+            beginCycle();
+            const fi = firstSpotIndex(session.spots);
+            const ok = await reveal(session.spots[fi]);
             if (gen !== generation) return;
             if (ok) {
+              session.cursor = fi;
               setStatus('Wrapped');
               return;
             }
-            session.returned = new Set();
-            session.anchor = null;
             seen = new Set();
             stagnant = 0;
             if (scroller) scroller.scrollTop = 0;
@@ -1219,7 +2014,7 @@
     btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'amps-btn';
-    btn.title = 'Find in playlist 1.0.9';
+    btn.title = 'Find in playlist 1.1.0';
     btn.setAttribute('aria-label', 'Find in playlist');
     btn.setAttribute('aria-expanded', 'false');
     btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 15.5 L20 20.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
@@ -1283,10 +2078,21 @@
       session = null;
       books = new Map();
       kept = null;
+      catalog = null;
+      askedKey = '';
+      clearReach();
       clearHighlight();
     }
     if (key) lastKey = key;
     lastPath = path;
+    if (reach && reach.scroller && !reach.scroller.isConnected) {
+      const nextScroller = pickScroller(collectRows());
+      if (nextScroller) reach.scroller = nextScroller;
+    }
+    if (key && askedKey !== key) {
+      askedKey = key;
+      requestCatalog();
+    }
     if (overlayOpen() || localPlaceholderPage()) {
       if (pop) closePop();
       if (btn) { btn.remove(); btn = null; }
@@ -1309,6 +2115,16 @@
     if (pop && pop.isConnected && !pop.hidden) closePop();
   });
 
+  document.addEventListener('scroll', (e) => {
+    if (!onPlaylist()) return;
+    const raw = collectRows();
+    const scroller = pickScroller(raw);
+    if (!scroller) return;
+    const target = e && e.target;
+    if (target && target !== document && target !== scroller && target !== document.documentElement) return;
+    notePositions(scroller, parsedInScroller(raw).parsed);
+  }, true);
+
   document.addEventListener('wheel', markUserScroll, true);
   document.addEventListener('touchmove', markUserScroll, true);
   document.addEventListener('keydown', (e) => {
@@ -1325,6 +2141,7 @@
     }
   }, true);
 
+  window.addEventListener('message', onCatalogMessage);
   window.addEventListener('popstate', sync);
   setInterval(sync, 400);
   sync();
@@ -1340,7 +2157,12 @@
       rowOffset: rowOffset,
       nextForwardIndex: nextForwardIndex,
       firstSpotIndex: firstSpotIndex,
-      orderPos: orderPos
+      orderPos: orderPos,
+      trackMatchesQuery: trackMatchesQuery,
+      pickCatalogIndex: pickCatalogIndex,
+      matchIndices: matchIndices,
+      indexScrollTop: indexScrollTop,
+      pitchScrollTop: pitchScrollTop
     };
   }
 })();

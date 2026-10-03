@@ -201,5 +201,32 @@ assert(amps.isBelow(rock, champs) === false, 'find next does not go backward');
 assert(amps.isBelow({ id: 'i:53:THE ANSWER|Hiroyuki Sawano', index: 53 }, { id: 'i:14:Reweave|Konomi Suzuki', index: 14 }) === true, 'answer is after reweave');
 assert(amps.isBelow({ id: 'i:3:PARAGON|Hiroyuki Sawano', index: 3 }, { id: 'i:14:Reweave|Konomi Suzuki', index: 14 }) === false, 'paragon is not after reweave');
 
+assert(amps.trackMatchesQuery({ title: 'Blinding Lights', artist: 'The Weeknd' }, 'light') === true, 'catalog title');
+assert(amps.trackMatchesQuery({ title: 'Blinding Lights', artist: 'The Weeknd' }, 'week') === true, 'catalog artist');
+assert(amps.trackMatchesQuery({ title: 'Cicada', artist: 'Good Kid' }, 'we') === false, 'catalog album is not a field');
+const order = amps.matchIndices([
+  { title: 'Reweave', artist: 'A' },
+  { title: 'Paragon', artist: 'B' },
+  { title: 'We Speak Chinese', artist: 'C' },
+  { title: 'Cicada', artist: 'D' }
+], 'we');
+assert(order.join(',') === '0,2', 'catalog indices ' + order.join(','));
+const first = amps.pickCatalogIndex(order, -1);
+assert(first && first.index === 0 && first.wrapped === false, 'first catalog hit');
+const next = amps.pickCatalogIndex(order, 0);
+assert(next && next.index === 2 && next.wrapped === false, 'next catalog hit');
+const wrap = amps.pickCatalogIndex(order, 2);
+assert(wrap && wrap.index === 0 && wrap.wrapped === true, 'wrap catalog hit');
+const afterWrap = amps.pickCatalogIndex(order, wrap.index);
+assert(afterWrap && afterWrap.index === 2 && afterWrap.wrapped === false, 'after wrap, find continues');
+const wrapAgain = amps.pickCatalogIndex(order, afterWrap.index);
+assert(wrapAgain && wrapAgain.index === 0 && wrapAgain.wrapped === true, 'second cycle wraps');
+assert(amps.pickCatalogIndex([], 0) === null, 'no catalog hit');
+assert(amps.indexScrollTop(0, 9, 1000) === 0, 'index 0 scroll');
+assert(amps.indexScrollTop(9, 9, 1000) === 1000, 'last index uses maxScroll');
+assert(Math.round(amps.indexScrollTop(3, 9, 900)) === 300, 'index/last * maxScroll');
+assert(amps.pitchScrollTop(4, 50, 20) === 220, 'row height plus header');
+assert(amps.indexScrollTop(3, 0, 1000) === null, 'ratio needs a last index');
+
 console.log('ok');
 process.exit(0);

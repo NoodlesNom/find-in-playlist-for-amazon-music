@@ -2,7 +2,7 @@
 
 Do not submit this. Paste it into Partner Center only when you choose to publish.
 
-The short description is not a separate store field you can type. Microsoft Edge Add-ons uses the `description` string in `manifest.json`. That string is already set to the short description below. The extension name in the manifest is already the name below. Version in the package is 1.0.9. This draft was not submitted.
+The short description is not a separate store field you can type. Microsoft Edge Add-ons uses the `description` string in `manifest.json`. That string is already set to the short description below. The extension name in the manifest is already the name below. Version in the package is 1.1.0. This draft was not submitted.
 
 ## Name
 
@@ -20,7 +20,7 @@ Find in Playlist for Amazon Music finds a song inside a playlist on the Amazon M
 
 A round button appears at the top right of the player, directly under the Lyrics Translate button if you use that extension too. Click it and type part of a song title or an artist name, then choose Find next. The match is case-insensitive and can be any part of the title or the artist. Find next scrolls that row into view and highlights the matching text. It does not play the song.
 
-Tracks that are not loaded yet are included. The extension scrolls the playlist so later songs can be searched, then stops on the next match. After the last match, the next search wraps once, back to the first match, and the box says Wrapped.
+Tracks that are not loaded yet are included. The extension scrolls the playlist so later songs can be searched, then stops on the next match. A song that has already been scrolled past is jumped to immediately when searched. After the last match, search starts over at the first match, and the box says Wrapped.
 
 The button hides when the lyrics view, the queue, or the Local Files playlist is open. Search stays hidden on the Local Files playlist as well as the queue and lyrics. It works alongside Lyrics Translate and Romanize for Amazon Music with seamless compatibility: the translator button and the find button stack, the translation panel sits above the search button, and opening translation closes the search box. Opening lyrics does not fight search.
 

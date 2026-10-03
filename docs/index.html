@@ -150,6 +150,10 @@ fetch('versions.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : Pro
     el.textContent = ' (v' + x + ')';
     if (when) el.parentElement.title = (el.parentElement.title ? el.parentElement.title + '. ' : '') + when;
   });
+  // The "store can lag behind GitHub" note only matters while GitHub is ahead; hide it when both show the same version.
+  if (ok(v.store) && ok(v.github) && v.store === v.github) {
+    document.querySelectorAll('.note.versions').forEach((el) => { el.hidden = true; });
+  }
 }).catch(() => {});
 </script>
 </body>
